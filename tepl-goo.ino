@@ -1,3 +1,6 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
 
 #include <SPI.h>
 #include <Ethernet.h>
@@ -12,7 +15,12 @@
 #undef round
 dht11 DHT11;
 #define DHT11PIN 8
+#define ONE_WIRE_BUS 2
 
+// Setup a oneWire instance to communicate with any OneWire devices 
+OneWire oneWire(ONE_WIRE_BUS);
+// Pass our oneWire reference to Dallas Temperature.
+DallasTemperature sensors(&oneWire);
 
 ///////////////////////////////
 ///      EDIT THIS STUFF     //
@@ -46,6 +54,8 @@ void setup()
   Ethernet.begin(mac, ip);
   delay(1000);
   Serial.println("merim...");
+  
+  sensors.begin();
 }
  
 void loop(){
@@ -61,6 +71,9 @@ void loop(){
     int chk = DHT11.read(DHT11PIN);
     int temp = DHT11.temperature;
     int hum = DHT11.humidity;
+    
+    sensors.requestTemperatures(); // Send the command to get temperatures
+     
     temp_av=temp_av+temp;
     hum_av=hum_av+hum;
     delay(10000);
@@ -68,7 +81,11 @@ void loop(){
     Serial.print(":");
     Serial.print(temp);
     Serial.print(":");
-    Serial.println(hum);
+    Serial.print(hum);
+    Serial.print(":");
+    Serial.print(sensors.getTempCByIndex(0)); //Dallas 0
+    Serial.print(":");
+    Serial.println(sensors.getTempCByIndex(1)); //Dallas 1
   }
   
   int avtemp=temp_av/(del);
