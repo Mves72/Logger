@@ -44,6 +44,9 @@ int del=30;  // Amount of seconds delay between posting to google docs.
 int k=0;
 int temp_av = 0;
 int hum_av = 0;
+float temp1_av = 0;
+float temp2_av = 0;
+
 char server[] = "api.pushingbox.com";
 EthernetClient client;
  
@@ -71,31 +74,46 @@ void loop(){
     int chk = DHT11.read(DHT11PIN);
     int temp = DHT11.temperature;
     int hum = DHT11.humidity;
-    
-    sensors.requestTemperatures(); // Send the command to get temperatures
-     
     temp_av=temp_av+temp;
     hum_av=hum_av+hum;
+    
+    sensors.requestTemperatures(); // Send the command to get temperatures
+    float temp1 = sensors.getTempCByIndex(0);  //Dallas 0
+    float temp2 = sensors.getTempCByIndex(1);  //Dallas 1
+    temp1_av=temp1_av+temp1;
+    temp2_av=temp2_av+temp2;
+    
     delay(10000);
     Serial.print(j);
     Serial.print(":");
     Serial.print(temp);
     Serial.print(":");
     Serial.print(hum);
+    Serial.print(">");
+    Serial.print(temp1); //Dallas 0
     Serial.print(":");
-    Serial.print(sensors.getTempCByIndex(0)); //Dallas 0
-    Serial.print(":");
-    Serial.println(sensors.getTempCByIndex(1)); //Dallas 1
+    Serial.println(temp2); //Dallas 1
   }
   
   int avtemp=temp_av/(del);
   int avhum=hum_av/(del);
+  float avtemp1=temp1_av/(del);
+  float avtemp2=temp2_av/(del);
+  
   hum_av=0;
   temp_av=0;
+  temp1_av=0;
+  temp2_av=0;
+  
   Serial.print("namereno:");
   Serial.print(avtemp);
   Serial.print(":");
-  Serial.println(avhum);  
+  Serial.print(avhum);  
+  Serial.print(">");
+  Serial.print(avtemp1,1);
+  Serial.print(":");
+  Serial.println(avtemp2,1);
+
   Serial.print("Connecting...");  
     
   
@@ -107,10 +125,14 @@ void loop(){
     Serial.println(devid);
     
     String postmsg;
-    postmsg="POST /pushingbox?devid=v69407214FD58BE3&status=";
+    postmsg="POST /pushingbox?devid=v69407214FD58BE3&temp=";
     postmsg=postmsg+String(avtemp);
     postmsg=postmsg+"&humi=";
     postmsg=postmsg+String(avhum);
+    postmsg=postmsg+"&temp1=";
+    postmsg=postmsg+String(avtemp1,1);
+    postmsg=postmsg+"&temp2=";
+    postmsg=postmsg+String(avtemp2,1);
     postmsg=postmsg+" HTTP/1.1";
 
     //sprintf(postmsg,"GET /pushingbox?devid=%c&status=%d HTTP/1.1",devid,avtemp);  // NOTE** In this line of code you can see where the temperature value is inserted into the wed address. It follows 'status=' Change that value to whatever you want to post.
@@ -142,8 +164,4 @@ void loop(){
 }
 
 
-double Fahrenheit(double celsius) // Function to convert to Fahrenheit
-{
-	return 1.8 * celsius + 32;
-}
 
