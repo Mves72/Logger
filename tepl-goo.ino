@@ -1,54 +1,50 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
-
-
 #include <SPI.h>
 #include <Ethernet.h>
 #include <EthernetUdp.h>
 #include <SPI.h>
 #include <dht11.h> 
 
+
 #undef int
 #undef abs
 #undef double
 #undef float
 #undef round
-dht11 DHT11;
 #define DHT11PIN 8
 #define ONE_WIRE_BUS 2
+
+
+//nastavení čidla DHT 11
+dht11 DHT11;
+
 
 // Setup a oneWire instance to communicate with any OneWire devices 
 OneWire oneWire(ONE_WIRE_BUS);
 // Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
+int dp = 2; //pocet dallas cidel
 
-///////////////////////////////
-///      EDIT THIS STUFF     //
-///////////////////////////////
-
+//nastavení sítě    
 byte mac[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF };  //Replace with your Ethernet shield MAC
 byte ip[] = {192,168,1,177};     // Your Arduino device IP address
 
+//nastavení přístupu k serveru PushInBox
 char devid[] = "v69407214FD58BE3";  // THIS IS THE DEVICE ID FROM PUSHINGBOX
-
 int del=30;  // Amount of seconds delay between posting to google docs.
-
-///////////////////////////////
-//       DONE EDITING        //
-///////////////////////////////
-
+char server[] = "api.pushingbox.com";
+EthernetClient client;
 
  
 
 //char postmsg[100];
-int k=0;
-int temp_av = 0;
-int hum_av = 0;
-float temp1_av = 0;
-float temp2_av = 0;
+int k=0; //kontrola odeslání dat na internet
+float temp_av[3]; //průměrná teplota
+float avtemp[3]; //pro výpočet pr. teploty
+float tempd[2];
+int hum_av = 0; //průměrná vlhkost
 
-char server[] = "api.pushingbox.com";
-EthernetClient client;
  
  
 void setup()
@@ -74,46 +70,51 @@ void loop(){
     int chk = DHT11.read(DHT11PIN);
     int temp = DHT11.temperature;
     int hum = DHT11.humidity;
-    temp_av=temp_av+temp;
+    temp_av[0]=temp_av[0]+temp;
     hum_av=hum_av+hum;
     
     sensors.requestTemperatures(); // Send the command to get temperatures
-    float temp1 = sensors.getTempCByIndex(0);  //Dallas 0
-    float temp2 = sensors.getTempCByIndex(1);  //Dallas 1
-    temp1_av=temp1_av+temp1;
-    temp2_av=temp2_av+temp2;
-    
+   for(int i=0 ;i<dp;i++)
+   {
+     tempd[i]=sensors.getTempCByIndex(i);
+     temp_av[i+1]=temp_av[i+1]+tempd[i];
+   } 
     delay(10000);
     Serial.print(j);
     Serial.print(":");
+    Serial.print(hum);   // vlhkost
+    Serial.print(":");
     Serial.print(temp);
+    Serial.println(">");
+    for(int i=0 ;i<dp;i++)
+    { 
+    Serial.print(tempd[i]); //teploty
     Serial.print(":");
-    Serial.print(hum);
-    Serial.print(">");
-    Serial.print(temp1); //Dallas 0
-    Serial.print(":");
-    Serial.println(temp2); //Dallas 1
+    }
+    Serial.println("");//odřádkování
   }
   
-  int avtemp=temp_av/(del);
   int avhum=hum_av/(del);
-  float avtemp1=temp1_av/(del);
-  float avtemp2=temp2_av/(del);
-  
   hum_av=0;
-  temp_av=0;
-  temp1_av=0;
-  temp2_av=0;
+
+  for(int i=0 ;i<dp+1;i++)
+  {
+  avtemp[i]=temp_av[i]/(del);
+  temp_av[i]=0;
+  }
+  
   
   Serial.print("namereno:");
-  Serial.print(avtemp);
   Serial.print(":");
   Serial.print(avhum);  
-  Serial.print(">");
-  Serial.print(avtemp1,1);
+  Serial.println(">");
+  for(int i=0 ;i<dp+1;i++)
+  {
+  Serial.println(i);
+  Serial.print(avtemp[i],1);
   Serial.print(":");
-  Serial.println(avtemp2,1);
-
+  }
+  Serial.println("");
   Serial.print("Connecting...");  
     
   
@@ -126,13 +127,13 @@ void loop(){
     
     String postmsg;
     postmsg="POST /pushingbox?devid=v69407214FD58BE3&temp=";
-    postmsg=postmsg+String(avtemp);
+    postmsg=postmsg+String(avtemp[0]);
     postmsg=postmsg+"&humi=";
     postmsg=postmsg+String(avhum);
     postmsg=postmsg+"&temp1=";
-    postmsg=postmsg+String(avtemp1,1);
+    postmsg=postmsg+String(avtemp[1],1);
     postmsg=postmsg+"&temp2=";
-    postmsg=postmsg+String(avtemp2,1);
+    postmsg=postmsg+String(avtemp[2],1);
     postmsg=postmsg+" HTTP/1.1";
 
     //sprintf(postmsg,"GET /pushingbox?devid=%c&status=%d HTTP/1.1",devid,avtemp);  // NOTE** In this line of code you can see where the temperature value is inserted into the wed address. It follows 'status=' Change that value to whatever you want to post.
