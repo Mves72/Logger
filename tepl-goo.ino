@@ -126,7 +126,7 @@ void loop(){
     Serial.println(devid);
     
     String postmsg;
-    postmsg="POST /pushingbox?devid=v69407214FD58BE3&temp=";
+    postmsg="GET /pushingbox?devid=v69407214FD58BE3&temp=";
     postmsg=postmsg+String(avtemp[0]);
     postmsg=postmsg+"&humi=";
     postmsg=postmsg+String(avhum);
@@ -142,6 +142,8 @@ void loop(){
     client.println("Connection: close");
     client.println();
 
+
+   
     Serial.println(postmsg);
     Serial.println("Host: api.pushingbox.com");
     Serial.println("Connection: close");
